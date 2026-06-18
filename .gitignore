@@ -1,0 +1,39 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Docker
+*.log
+
+# Kubernetes / secrets
+*.kubeconfig
+secrets.yaml
+**/secrets/*.yaml
+!**/secrets/*.example.yaml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Local data / test outputs
+/local-assets/
+/tmp/
