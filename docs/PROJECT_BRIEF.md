@@ -51,7 +51,7 @@ Carlos Padilla is a Game Developer and Software Engineer with extensive C# and U
 
 ## Tech Stack Summary
 
-- .NET 8 Web API (C#)
+- .NET 10 Web API (C#)
 - Docker
 - Kubernetes (k3s locally)
 - PostgreSQL (Supabase free tier)
@@ -70,10 +70,12 @@ Carlos Padilla is a Game Developer and Software Engineer with extensive C# and U
 
 - **Mermaid** — architecture and flow diagrams living in the GitHub README, version-controlled with code
 - **Notion** — project documentation, Architecture Decision Records (ADRs), learning log
-- **Excalidraw** — informal system overview sketches
+- **Excalidraw** — connected via MCP; for sketching ideas still taking shape, before they're formalized into Mermaid diagrams
 - **GitHub** — public repository, source of truth for code
 - **Claude Code** — scaffolding, Dockerfiles, Kubernetes manifests
 - **Cowork** — file management, cross-session continuity, guided build process
+- **Visual Studio 2026** — primary local IDE; required for full .NET 10 tooling (VS 2022 has no .NET 10 project/debugger support)
+- **VS Code** — secondary editor for everything outside the .NET solution: Mermaid preview, Kubernetes manifests, Dockerfiles, Terraform, GitHub Actions workflows
 
 ## Cost
 

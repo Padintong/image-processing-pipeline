@@ -33,9 +33,26 @@ flowchart LR
 
 This diagram will evolve as architecture decisions are made — see the ADRs in the project's Notion workspace.
 
+## Solution Structure
+
+```mermaid
+flowchart TD
+    subgraph sln[ImagePipeline.sln]
+        Api[ImagePipeline.Api]
+        Worker[ImagePipeline.Worker]
+        Core[ImagePipeline.Core]
+        Tests[ImagePipeline.Tests]
+    end
+    Api --> Core
+    Worker --> Core
+    Tests --> Core
+```
+
+Four projects: **Api** (REST entry point) and **Worker** (queue consumer, hosts the Claude agents) both depend on **Core** (shared domain models and, for now, data access) but never on each other. **Tests** depends on Core only. See [ADR-002](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the reasoning, including why data access lives inside Core for now rather than a separate project.
+
 ## Tech Stack
 
-- .NET 8 Web API (C#)
+- .NET 10 Web API (C#)
 - Docker
 - Kubernetes (k3s, local)
 - PostgreSQL (Supabase free tier)
