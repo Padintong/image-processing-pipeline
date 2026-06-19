@@ -37,7 +37,7 @@ This diagram will evolve as architecture decisions are made — see the ADRs in 
 
 ```mermaid
 flowchart TD
-    subgraph sln[ImagePipeline.sln]
+    subgraph sln[ImagePipeline.slnx]
         Api[ImagePipeline.Api]
         Worker[ImagePipeline.Worker]
         Core[ImagePipeline.Core]
@@ -68,7 +68,15 @@ Four projects: **Api** (REST entry point) and **Worker** (queue consumer, hosts 
 
 ## Setup
 
-Coming soon — instructions will be added as the project is scaffolded.
+Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download) and either Visual Studio 2026 or VS Code with the C# Dev Kit extension.
+
+```bash
+git clone https://github.com/Padintong/image-processing-pipeline.git
+cd image-processing-pipeline
+dotnet build
+```
+
+Open `ImagePipeline.slnx` in Visual Studio 2026, or work from the CLI — both work against the same solution file. The four projects (Api, Worker, Core, Tests) are wired up per [Solution Structure](#solution-structure) above, but there's no real functionality yet; `dotnet build` succeeding is the meaningful check for now. These instructions will expand as the API and worker gain real logic.
 
 ## Demo
 
