@@ -1,0 +1,4 @@
+# Normalize line endings for everyone, regardless of each contributor's
+# local core.autocrlf setting. Stored in the repo as LF; git still checks
+# out text files using whatever's native to the checkout OS.
+* text=auto
