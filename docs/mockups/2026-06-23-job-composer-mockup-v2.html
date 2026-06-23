@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Image Pipeline — job composer mockup (2026-06-23, v2, rough draft)</title>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f3f2ee;
+  --color-background-info: #e6f1fb;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary: #888780;
+  --color-text-info: #0c447c;
+  --color-border-tertiary: rgba(0,0,0,0.14);
+  --color-border-secondary: rgba(0,0,0,0.24);
+  --color-border-info: #378add;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-background-secondary);
+  margin: 0;
+  padding: 2rem 1rem;
+}
+.wrap { max-width: 760px; margin: 0 auto; background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 1.5rem; }
+.note { font-size: 12px; color: var(--color-text-tertiary); margin: 0 0 1.25rem; }
+button, select, input { font-family: var(--font-sans); font-size: 13px; }
+button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="note">Rough mockup, 2026-06-23, v2 — builds on the 2026-06-22 job composer mockup. Adds: output destination controls (output_destination / is_relative_destination, ADR-007) directly on the recipe composer itself; a Single / Folder / Manifest mode switcher; Folder route's source-prefix control; Manifest route's default-recipe-plus-per-entry-override entries list (ADR-007/ADR-008, plus the manifest shape settled 2026-06-23). The entries list's asset-selection UX (browse-and-pick vs. upload) is intentionally left as a placeholder — not decided yet. Not final; see Architecture Decision Records / Technical Documentation in Notion for what's actually settled vs. still open at any later date this file is opened.</p>
+
+<div style="display:flex; gap:8px; margin-bottom:1.25rem; flex-wrap:wrap;">
+  <button type="button" class="mode-tab active" data-mode="single" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:var(--color-background-secondary); font-size:13px;">Single</button>
+  <button type="button" class="mode-tab" data-mode="folder" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent; font-size:13px;">Folder</button>
+  <button type="button" class="mode-tab" data-mode="manifest" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent; font-size:13px;">Manifest</button>
+  <button type="button" class="mode-tab" data-mode="overlay" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent; font-size:13px;">Overlay library</button>
+</div>
+
+<div id="panel-single" class="mode-panel">
+  <div class="composer-root"></div>
+</div>
+
+<div id="panel-folder" class="mode-panel" style="display:none;">
+  <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:1rem 1.25rem; margin-bottom:16px;">
+    <p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Source folder</p>
+    <input type="text" placeholder="e.g. raw/2026-Q2/" style="width:100%; box-sizing:border-box; padding:7px 10px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); margin-bottom:8px;" />
+    <p style="font-size:12px; color:var(--color-text-tertiary); margin:0;">Recursive — every asset under this prefix gets the recipe below. Self-reference guard: relative output mode excludes any path segment matching the output folder name from scanning; absolute mode is checked for overlap with this source prefix at submission.</p>
+  </div>
+  <div class="composer-root"></div>
+</div>
+
+<div id="panel-manifest" class="mode-panel" style="display:none;">
+  <p style="font-size:13px; font-weight:600; margin:0 0 10px;">Default recipe</p>
+  <div class="composer-root" style="margin-bottom:24px;"></div>
+  <p style="font-size:13px; font-weight:600; margin:0 0 10px;">Entries</p>
+  <div id="entries" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+  <button type="button" id="add-entry-btn" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent; font-size:13px; margin-bottom:16px;">+ Add entry</button>
+  <div style="background:var(--color-background-primary); border:0.5px dashed var(--color-border-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">
+    <p style="font-weight:600; font-size:14px; margin:0 0 6px;">Not decided yet</p>
+    <p style="font-size:12px; color:var(--color-text-tertiary); margin:0;">How the asset list actually gets built — browse-and-pick across the bucket, upload a manifest file, or both — is still open. Entries above are a plain text stand-in for whichever path wins. Each entry with no override inherits the default recipe wholesale; checking "Override recipe" replaces it entirely, never merges field-by-field (ADR-006 duplicate-card identity problem).</p>
+  </div>
+</div>
+
+<div id="panel-overlay" class="mode-panel" style="display:none;">
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;">
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Star</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Default - shape and marker</p>
+    </div>
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Diamond</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Default - shape and marker</p>
+    </div>
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Company logo</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Custom - watermark and logo</p>
+    </div>
+  </div>
+  <div style="background:var(--color-background-primary); border:0.5px dashed var(--color-border-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">
+    <p style="font-weight:600; font-size:14px; margin:0 0 10px;">Register a new overlay</p>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+      <input type="text" placeholder="Name" style="width:160px; padding:6px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" />
+      <select style="padding:6px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><option>Shape and marker</option><option>Badge</option><option>Watermark and logo</option><option>Custom</option></select>
+      <button type="button" style="padding:6px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Choose file</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+
+  // ---- shared, instance-agnostic helpers (same logic as v1) ----
+
+  function recalcCard(card){
+    var type = card.getAttribute('data-type');
+    function countActive(sel){ return card.querySelectorAll(sel + '.active').length; }
+    if(type==='resize') return countActive('.size-chip');
+    if(type==='color') return countActive('.color-chip');
+    if(type==='format') return countActive('.format-chip');
+    if(type==='overlay') return 1;
+    if(type==='achievement') return countActive('.star-chip') * countActive('.colormode-chip');
+    if(type==='cropresize') return countActive('.crop-chip') * countActive('.cr-size-chip');
+    return 0;
+  }
+
+  function chip(cls, label, active){
+    var bg = active ? 'var(--color-background-info)' : 'var(--color-background-primary)';
+    var col = active ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+    var bd = active ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+    return '<button type="button" class="chip ' + cls + (active ? ' active' : '') + '" style="border:0.5px solid ' + bd + '; background:' + bg + '; color:' + col + '; padding:4px 10px; border-radius:var(--border-radius-md); font-size:13px; cursor:pointer; margin:0 6px 6px 0;">' + label + '</button>';
+  }
+
+  function cardShell(type, title, isComposite, bodyHtml){
+    return '<div class="card" data-type="' + type + '" style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:6px;">'
+      + '<div style="display:flex; align-items:center; gap:8px;">'
+      + '<span style="font-weight:600; font-size:14px;">' + title + '</span>'
+      + (isComposite ? '<span style="font-size:11px; padding:2px 8px; border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info);">composite</span>' : '')
+      + '</div>'
+      + '<div style="display:flex; align-items:center; gap:10px;">'
+      + '<span class="card-output" style="font-size:13px; color:var(--color-text-secondary);">0 outputs</span>'
+      + '<button type="button" class="remove-card" aria-label="Remove operation" style="border:none; background:none; padding:2px; cursor:pointer; color:var(--color-text-tertiary); font-size:13px;">remove</button>'
+      + '</div></div><div class="card-body">' + bodyHtml + '</div></div>';
+  }
+
+  function bodyFor(type){
+    if(type==='resize'){
+      return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Sizes</span><div>'
+        + chip('size-chip','1920x1080',true) + chip('size-chip','1280x720',false) + chip('size-chip','800x600',false) + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Mode</span><select style="padding:4px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><option>Scale to fit</option><option>Crop to fill</option></select></div>';
+    }
+    if(type==='color'){
+      return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Treatments</span><div>'
+        + chip('color-chip','Black and white',true) + chip('color-chip','Sepia',false) + chip('color-chip','High contrast',false) + '</div></div>';
+    }
+    if(type==='format'){
+      return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Formats</span><div>'
+        + chip('format-chip','WebP',true) + chip('format-chip','AVIF',false) + chip('format-chip','PNG',false) + '</div></div>';
+    }
+    if(type==='overlay'){
+      return '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Overlay</span><select style="padding:4px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><optgroup label="Shapes and markers"><option>Star</option><option>Diamond</option></optgroup><optgroup label="Badges"><option>Trophy badge</option></optgroup><optgroup label="Watermark and logo"><option>Company logo</option></optgroup></select></div>';
+    }
+    if(type==='achievement'){
+      return '<div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px; padding-top:4px;">Stars</span><div>'
+        + [1,2,3,4,5,6].map(function(n){ return chip('star-chip', String(n), true); }).join('') + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Colour mode</span><div>'
+        + chip('colormode-chip','Colour',true) + chip('colormode-chip','Black and white',true) + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Size</span><input type="number" value="328" style="width:70px; padding:4px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" /><span style="font-size:13px; color:var(--color-text-tertiary);">x</span><input type="number" value="328" style="width:70px; padding:4px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" /><span style="font-size:12px; color:var(--color-text-tertiary); margin-left:8px;">default shown - editable</span></div>';
+    }
+    if(type==='cropresize'){
+      return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Crop to</span><div>'
+        + chip('crop-chip','Portrait',true) + chip('crop-chip','Landscape',true) + chip('crop-chip','Square',false) + '</div></div>'
+        + '<div style="display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px; padding-top:4px;">Sizes</span><div>'
+        + ['1920x1080','1600x900','1280x720','1024x576','800x450','640x360'].map(function(s){ return chip('cr-size-chip', s, true); }).join('') + '</div></div>';
+    }
+    return '';
+  }
+
+  var titles = {
+    resize: ['Resize', false],
+    color: ['Colour treatment', false],
+    format: ['Format conversion', false],
+    overlay: ['Overlay', false],
+    achievement: ['Achievement artwork', true],
+    cropresize: ['Crop and resize', true]
+  };
+
+  function opButton(type, label, composite){
+    var border = composite ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+    var bg = composite ? 'var(--color-background-info)' : 'transparent';
+    var color = composite ? 'color:var(--color-text-info);' : '';
+    return '<button type="button" class="add-op-btn" data-op="' + type + '" style="padding:8px 12px; border:0.5px solid ' + border + '; border-radius:var(--border-radius-md); background:' + bg + '; ' + color + '">' + label + '</button>';
+  }
+
+  // ---- new in v2: destination controls, attached to every composer instance ----
+
+  function destinationMarkup(){
+    return ''
+      + '<div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:1rem 1.25rem;">'
+      + '<p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Output</p>'
+      + '<div style="display:flex; gap:8px; margin-bottom:10px;">'
+      + '<button type="button" class="dest-mode-btn active" data-mode="absolute" style="padding:6px 12px; border:0.5px solid var(--color-border-info); border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info); font-size:13px;">Absolute</button>'
+      + '<button type="button" class="dest-mode-btn" data-mode="relative" style="padding:6px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:var(--color-background-primary); color:var(--color-text-secondary); font-size:13px;">Relative to source asset</button>'
+      + '</div>'
+      + '<input type="text" class="dest-input" placeholder="e.g. processed/2026-Q2/" style="width:100%; box-sizing:border-box; padding:7px 10px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); margin-bottom:8px;" />'
+      + '<p style="font-size:12px; color:var(--color-text-tertiary); margin:0;">Absolute — every output goes under this prefix. Relative — created inside the same folder as each source asset.</p>'
+      + '</div>';
+  }
+
+  function composerMarkup(){
+    return ''
+      + '<p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Atomic operations</p>'
+      + '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">'
+      + opButton('resize','Resize',false) + opButton('color','Colour treatment',false) + opButton('format','Format conversion',false) + opButton('overlay','Overlay',false)
+      + '</div>'
+      + '<p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Composite operations</p>'
+      + '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;">'
+      + opButton('achievement','Achievement artwork',true) + opButton('cropresize','Crop and resize',true)
+      + '</div>'
+      + '<div class="cards" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;"></div>'
+      + '<div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">'
+      + '<span style="font-size:13px; color:var(--color-text-secondary);">Estimated outputs for this recipe</span>'
+      + '<span class="total-outputs" style="font-size:24px; font-weight:600;">0</span>'
+      + '</div>'
+      + destinationMarkup();
+  }
+
+  // ---- composer factory: scoped to whatever container it's given, no global IDs ----
+  // used once for Single, once for Folder's one recipe, once for Manifest's default
+  // recipe, and again per Manifest entry that opts into "Override recipe".
+
+  function createComposer(container){
+    var cardsEl = container.querySelector('.cards');
+    var totalEl = container.querySelector('.total-outputs');
+
+    function recalcAll(){
+      var total = 0;
+      cardsEl.querySelectorAll('.card').forEach(function(card){
+        var n = recalcCard(card);
+        var out = card.querySelector('.card-output');
+        out.textContent = n + (n===1 ? ' output' : ' outputs');
+        total += n;
+      });
+      totalEl.textContent = Math.round(total);
+    }
+
+    function addCard(type){
+      var t = titles[type];
+      var wrap = document.createElement('div');
+      wrap.innerHTML = cardShell(type, t[0], t[1], bodyFor(type));
+      var card = wrap.firstChild;
+      cardsEl.appendChild(card);
+      card.querySelectorAll('.chip').forEach(function(c){
+        c.addEventListener('click', function(){
+          c.classList.toggle('active');
+          var active = c.classList.contains('active');
+          c.style.background = active ? 'var(--color-background-info)' : 'var(--color-background-primary)';
+          c.style.color = active ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+          c.style.borderColor = active ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+          recalcAll();
+        });
+      });
+      card.querySelector('.remove-card').addEventListener('click', function(){
+        card.remove();
+        recalcAll();
+      });
+      recalcAll();
+    }
+
+    container.querySelectorAll('.add-op-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ addCard(btn.getAttribute('data-op')); });
+    });
+
+    container.querySelectorAll('.dest-mode-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        container.querySelectorAll('.dest-mode-btn').forEach(function(b){
+          b.classList.remove('active');
+          b.style.borderColor = 'var(--color-border-tertiary)';
+          b.style.background = 'var(--color-background-primary)';
+          b.style.color = 'var(--color-text-secondary)';
+        });
+        btn.classList.add('active');
+        btn.style.borderColor = 'var(--color-border-info)';
+        btn.style.background = 'var(--color-background-info)';
+        btn.style.color = 'var(--color-text-info)';
+      });
+    });
+
+    return { addCard: addCard };
+  }
+
+  // ---- mode switcher (Single / Folder / Manifest / Overlay library) ----
+
+  var modeTabs = document.querySelectorAll('.mode-tab');
+  var modePanels = {
+    single: document.getElementById('panel-single'),
+    folder: document.getElementById('panel-folder'),
+    manifest: document.getElementById('panel-manifest'),
+    overlay: document.getElementById('panel-overlay')
+  };
+  modeTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      modeTabs.forEach(function(t){
+        t.classList.remove('active');
+        t.style.background = 'transparent';
+      });
+      tab.classList.add('active');
+      tab.style.background = 'var(--color-background-secondary)';
+      Object.keys(modePanels).forEach(function(key){
+        modePanels[key].style.display = (key === tab.getAttribute('data-mode')) ? '' : 'none';
+      });
+    });
+  });
+
+  // ---- init one composer per top-level recipe slot ----
+
+  var singleRoot = document.querySelector('#panel-single .composer-root');
+  singleRoot.innerHTML = composerMarkup();
+  var singleComposer = createComposer(singleRoot);
+  singleComposer.addCard('achievement');
+
+  var folderRoot = document.querySelector('#panel-folder .composer-root');
+  folderRoot.innerHTML = composerMarkup();
+  createComposer(folderRoot);
+
+  var manifestDefaultRoot = document.querySelector('#panel-manifest .composer-root');
+  manifestDefaultRoot.innerHTML = composerMarkup();
+  createComposer(manifestDefaultRoot);
+
+  // ---- Manifest entries: asset_ref + optional whole-block recipe override ----
+
+  var entriesEl = document.getElementById('entries');
+
+  function addEntry(seedOverride){
+    var wrap = document.createElement('div');
+    wrap.className = 'entry-row';
+    wrap.style.cssText = 'background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:0.85rem 1rem;';
+    wrap.innerHTML = ''
+      + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
+      + '<input type="text" class="entry-asset" placeholder="e.g. exercises/squat/squat_042.jpg" style="flex:1; min-width:200px; padding:6px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" />'
+      + '<label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--color-text-secondary); white-space:nowrap;"><input type="checkbox" class="entry-override-toggle" /> Override recipe</label>'
+      + '<button type="button" class="remove-entry" style="border:none; background:none; padding:2px; cursor:pointer; color:var(--color-text-tertiary); font-size:13px;">remove</button>'
+      + '</div>'
+      + '<div class="entry-override-composer" style="display:none; margin-top:12px; padding-top:12px; border-top:0.5px solid var(--color-border-tertiary);"></div>';
+    entriesEl.appendChild(wrap);
+
+    var toggle = wrap.querySelector('.entry-override-toggle');
+    var overrideRoot = wrap.querySelector('.entry-override-composer');
+    var ready = false;
+    var composerHandle = null;
+
+    function enableOverride(){
+      if(!ready){
+        overrideRoot.innerHTML = composerMarkup();
+        composerHandle = createComposer(overrideRoot);
+        ready = true;
+      }
+      return composerHandle;
+    }
+
+    toggle.addEventListener('change', function(){
+      if(toggle.checked){
+        enableOverride();
+        overrideRoot.style.display = '';
+      } else {
+        overrideRoot.style.display = 'none';
+      }
+    });
+
+    wrap.querySelector('.remove-entry').addEventListener('click', function(){
+      wrap.remove();
+    });
+
+    if(seedOverride){
+      toggle.checked = true;
+      var handle = enableOverride();
+      overrideRoot.style.display = '';
+      handle.addCard('cropresize');
+    }
+  }
+
+  document.getElementById('add-entry-btn').addEventListener('click', function(){ addEntry(false); });
+
+  addEntry(false);
+  addEntry(true);
+
+})();
+</script>
+</body>
+</html>

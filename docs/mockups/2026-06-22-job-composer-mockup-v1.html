@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Image Pipeline — job composer mockup (2026-06-22, v1, rough draft)</title>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f3f2ee;
+  --color-background-info: #e6f1fb;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary: #888780;
+  --color-text-info: #0c447c;
+  --color-border-tertiary: rgba(0,0,0,0.14);
+  --color-border-secondary: rgba(0,0,0,0.24);
+  --color-border-info: #378add;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-background-secondary);
+  margin: 0;
+  padding: 2rem 1rem;
+}
+.wrap { max-width: 720px; margin: 0 auto; background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 1.5rem; }
+.note { font-size: 12px; color: var(--color-text-tertiary); margin: 0 0 1.25rem; }
+button, select, input { font-family: var(--font-sans); font-size: 13px; }
+button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="note">Rough mockup, 2026-06-22 — first pass on the process_image job composer. Not final; see the Architecture Decision Records / Technical Documentation pages in Notion for what's actually settled vs. still open at any later date this file is opened.</p>
+
+<div style="display:flex; gap:8px; margin-bottom:1.25rem;">
+  <button type="button" id="tab-job" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:var(--color-background-secondary); font-size:13px;">New job</button>
+  <button type="button" id="tab-overlay" style="padding:8px 14px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent; font-size:13px;">Overlay library</button>
+</div>
+
+<div id="panel-job">
+  <p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Atomic operations</p>
+  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+    <button type="button" class="add-op-btn" data-op="resize" style="padding:8px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Resize</button>
+    <button type="button" class="add-op-btn" data-op="color" style="padding:8px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Colour treatment</button>
+    <button type="button" class="add-op-btn" data-op="format" style="padding:8px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Format conversion</button>
+    <button type="button" class="add-op-btn" data-op="overlay" style="padding:8px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Overlay</button>
+  </div>
+  <p style="font-size:12px; color:var(--color-text-tertiary); margin:0 0 8px;">Composite operations</p>
+  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;">
+    <button type="button" class="add-op-btn" data-op="achievement" style="padding:8px 12px; border:0.5px solid var(--color-border-info); border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info);">Achievement artwork</button>
+    <button type="button" class="add-op-btn" data-op="cropresize" style="padding:8px 12px; border:0.5px solid var(--color-border-info); border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info);">Crop and resize</button>
+  </div>
+
+  <div id="cards" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;"></div>
+
+  <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-size:13px; color:var(--color-text-secondary);">Estimated outputs for this job</span>
+    <span id="total-outputs" style="font-size:24px; font-weight:600;">0</span>
+  </div>
+</div>
+
+<div id="panel-overlay" style="display:none;">
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;">
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Star</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Default - shape and marker</p>
+    </div>
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Diamond</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Default - shape and marker</p>
+    </div>
+    <div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 2px;">Company logo</p>
+      <p style="font-size:12px; color:var(--color-text-secondary); margin:0;">Custom - watermark and logo</p>
+    </div>
+  </div>
+  <div style="background:var(--color-background-primary); border:0.5px dashed var(--color-border-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">
+    <p style="font-weight:600; font-size:14px; margin:0 0 10px;">Register a new overlay</p>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+      <input type="text" placeholder="Name" style="width:160px; padding:6px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" />
+      <select style="padding:6px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><option>Shape and marker</option><option>Badge</option><option>Watermark and logo</option><option>Custom</option></select>
+      <button type="button" style="padding:6px 12px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); background:transparent;">Choose file</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  var cardsEl = document.getElementById('cards');
+  var totalEl = document.getElementById('total-outputs');
+  var counter = 0;
+
+  function recalcCard(card){
+    var type = card.getAttribute('data-type');
+    function countActive(sel){ return card.querySelectorAll(sel + '.active').length; }
+    if(type==='resize') return countActive('.size-chip');
+    if(type==='color') return countActive('.color-chip');
+    if(type==='format') return countActive('.format-chip');
+    if(type==='overlay') return 1;
+    if(type==='achievement') return countActive('.star-chip') * countActive('.colormode-chip');
+    if(type==='cropresize') return countActive('.crop-chip') * countActive('.cr-size-chip');
+    return 0;
+  }
+
+  function recalcAll(){
+    var total = 0;
+    cardsEl.querySelectorAll('.card').forEach(function(card){
+      var n = recalcCard(card);
+      var out = card.querySelector('.card-output');
+      out.textContent = n + (n===1 ? ' output' : ' outputs');
+      total += n;
+    });
+    totalEl.textContent = Math.round(total);
+  }
+
+  function chip(cls, label, active){
+    var bg = active ? 'var(--color-background-info)' : 'var(--color-background-primary)';
+    var col = active ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+    var bd = active ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+    return '<button type="button" class="chip ' + cls + (active ? ' active' : '') + '" style="border:0.5px solid ' + bd + '; background:' + bg + '; color:' + col + '; padding:4px 10px; border-radius:var(--border-radius-md); font-size:13px; cursor:pointer; margin:0 6px 6px 0;">' + label + '</button>';
+  }
+
+  function cardShell(type, title, isComposite, bodyHtml){
+    return '<div class="card" data-type="' + type + '" style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:6px;">'
+      + '<div style="display:flex; align-items:center; gap:8px;">'
+      + '<span style="font-weight:600; font-size:14px;">' + title + '</span>'
+      + (isComposite ? '<span style="font-size:11px; padding:2px 8px; border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info);">composite</span>' : '')
+      + '</div>'
+      + '<div style="display:flex; align-items:center; gap:10px;">'
+      + '<span class="card-output" style="font-size:13px; color:var(--color-text-secondary);">0 outputs</span>'
+      + '<button type="button" class="remove-card" aria-label="Remove operation" style="border:none; background:none; padding:2px; cursor:pointer; color:var(--color-text-tertiary); font-size:13px;">remove</button>'
+      + '</div></div><div class="card-body">' + bodyHtml + '</div></div>';
+  }
+
+  function bodyFor(type){
+    if(type==='resize'){
+      return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Sizes</span><div>'
+        + chip('size-chip','1920x1080',true) + chip('size-chip','1280x720',false) + chip('size-chip','800x600',false) + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Mode</span><select style="padding:4px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><option>Scale to fit</option><option>Crop to fill</option></select></div>';
+    }
+    if(type==='color'){
+      return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Treatments</span><div>'
+        + chip('color-chip','Black and white',true) + chip('color-chip','Sepia',false) + chip('color-chip','High contrast',false) + '</div></div>';
+    }
+    if(type==='format'){
+      return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Formats</span><div>'
+        + chip('format-chip','WebP',true) + chip('format-chip','AVIF',false) + chip('format-chip','PNG',false) + '</div></div>';
+    }
+    if(type==='overlay'){
+      return '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Overlay</span><select style="padding:4px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);"><optgroup label="Shapes and markers"><option>Star</option><option>Diamond</option></optgroup><optgroup label="Badges"><option>Trophy badge</option></optgroup><optgroup label="Watermark and logo"><option>Company logo</option></optgroup></select></div>';
+    }
+    if(type==='achievement'){
+      return '<div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px; padding-top:4px;">Stars</span><div>'
+        + [1,2,3,4,5,6].map(function(n){ return chip('star-chip', String(n), true); }).join('') + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Colour mode</span><div>'
+        + chip('colormode-chip','Colour',true) + chip('colormode-chip','Black and white',true) + '</div></div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Size</span><input type="number" value="328" style="width:70px; padding:4px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" /><span style="font-size:13px; color:var(--color-text-tertiary);">x</span><input type="number" value="328" style="width:70px; padding:4px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);" /><span style="font-size:12px; color:var(--color-text-tertiary); margin-left:8px;">default shown - editable</span></div>';
+    }
+    if(type==='cropresize'){
+      return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px;">Crop to</span><div>'
+        + chip('crop-chip','Portrait',true) + chip('crop-chip','Landscape',true) + chip('crop-chip','Square',false) + '</div></div>'
+        + '<div style="display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap;"><span style="font-size:13px; color:var(--color-text-secondary); min-width:80px; padding-top:4px;">Sizes</span><div>'
+        + ['1920x1080','1600x900','1280x720','1024x576','800x450','640x360'].map(function(s){ return chip('cr-size-chip', s, true); }).join('') + '</div></div>';
+    }
+    return '';
+  }
+
+  var titles = {
+    resize: ['Resize', false],
+    color: ['Colour treatment', false],
+    format: ['Format conversion', false],
+    overlay: ['Overlay', false],
+    achievement: ['Achievement artwork', true],
+    cropresize: ['Crop and resize', true]
+  };
+
+  function addCard(type){
+    counter++;
+    var t = titles[type];
+    var wrap = document.createElement('div');
+    wrap.innerHTML = cardShell(type, t[0], t[1], bodyFor(type));
+    var card = wrap.firstChild;
+    cardsEl.appendChild(card);
+    card.querySelectorAll('.chip').forEach(function(c){
+      c.addEventListener('click', function(){
+        c.classList.toggle('active');
+        var active = c.classList.contains('active');
+        c.style.background = active ? 'var(--color-background-info)' : 'var(--color-background-primary)';
+        c.style.color = active ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+        c.style.borderColor = active ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+        recalcAll();
+      });
+    });
+    card.querySelector('.remove-card').addEventListener('click', function(){
+      card.remove();
+      recalcAll();
+    });
+    recalcAll();
+  }
+
+  document.querySelectorAll('.add-op-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ addCard(btn.getAttribute('data-op')); });
+  });
+
+  document.getElementById('tab-job').addEventListener('click', function(){
+    document.getElementById('panel-job').style.display = '';
+    document.getElementById('panel-overlay').style.display = 'none';
+    document.getElementById('tab-job').style.background = 'var(--color-background-secondary)';
+    document.getElementById('tab-overlay').style.background = 'transparent';
+  });
+  document.getElementById('tab-overlay').addEventListener('click', function(){
+    document.getElementById('panel-job').style.display = 'none';
+    document.getElementById('panel-overlay').style.display = '';
+    document.getElementById('tab-overlay').style.background = 'var(--color-background-secondary)';
+    document.getElementById('tab-job').style.background = 'transparent';
+  });
+
+  addCard('achievement');
+  addCard('cropresize');
+})();
+</script>
+</body>
+</html>
