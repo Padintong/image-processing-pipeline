@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Achievement artwork card — fidelity mockup (2026-06-25, v3)</title>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f3f2ee;
+  --color-background-info: #e6f1fb;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary: #888780;
+  --color-text-info: #0c447c;
+  --color-border-tertiary: rgba(0,0,0,0.14);
+  --color-border-secondary: rgba(0,0,0,0.24);
+  --color-border-info: #378add;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-background-secondary);
+  margin: 0;
+  padding: 2rem 1rem;
+}
+.wrap { max-width: 760px; margin: 0 auto; background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 1.5rem; }
+.note { font-size: 12px; color: var(--color-text-tertiary); margin: 0 0 1.25rem; }
+.note a { color: var(--color-text-info); }
+button, select, input { font-family: var(--font-sans); font-size: 13px; }
+button { cursor: pointer; }
+.step { padding: 14px 0; border-top: 0.5px solid var(--color-border-tertiary); }
+.step:first-of-type { border-top: none; padding-top: 0; }
+.step-head { display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+.step-num { font-size:11px; font-weight:600; color:var(--color-text-info); background:var(--color-background-info); border-radius:999px; width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.step-title { font-size:13px; font-weight:600; }
+.step-hint { font-size:11px; color:var(--color-text-tertiary); margin:6px 0 0; }
+.row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.row label.field-label { font-size:12px; color:var(--color-text-secondary); min-width:60px; }
+.num-input { width:64px; padding:5px 7px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); }
+.slider-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.slider-row label { font-size:12px; color:var(--color-text-secondary); min-width:70px; }
+.slider-row input[type=range] { flex:1; }
+.slider-row .val { font-size:12px; color:var(--color-text-tertiary); min-width:38px; text-align:right; }
+.toggle-row { display:flex; gap:18px; margin-bottom:16px; flex-wrap:wrap; }
+.toggle-row label { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--color-text-secondary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="note">Fidelity mockup, 2026-06-25, v3 — scoped to one question: now that Crop and Format conversion are candidates for Achievement artwork (alongside the already-settled Overlay / Colour treatment / Resize), does the card feel cluttered? Controls below aim for real fidelity to each step's settled shape — ADR-010 (atomics), ADR-012 (Resize fit-within-box), ADR-013 (background_colour) — not draft chips standing in for a future control. Format conversion's inclusion is NOT decided; this exists to help make that call. Toggle the two checkboxes below to compare. Not final — Notion is the source of truth.</p>
+
+<div class="toggle-row">
+  <label><input type="checkbox" id="toggle-crop" checked /> Include Crop step</label>
+  <label><input type="checkbox" id="toggle-format" checked /> Include Format conversion step</label>
+</div>
+
+<div class="card" style="background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-weight:600; font-size:14px;">Achievement artwork</span>
+      <span style="font-size:11px; padding:2px 8px; border-radius:var(--border-radius-md); background:var(--color-background-info); color:var(--color-text-info);">composite</span>
+    </div>
+    <span id="output-count" style="font-size:13px; color:var(--color-text-secondary);">1 output</span>
+  </div>
+
+  <div id="step-crop" class="step">
+    <div class="step-head"><span class="step-num">1</span><span class="step-title">Crop</span></div>
+    <div class="row">
+      <label class="field-label">X</label><input type="number" class="num-input" id="crop-x" value="0" />
+      <label class="field-label">Y</label><input type="number" class="num-input" id="crop-y" value="0" />
+      <label class="field-label">Width</label><input type="number" class="num-input" id="crop-w" value="1024" />
+      <label class="field-label">Height</label><input type="number" class="num-input" id="crop-h" value="1024" />
+    </div>
+    <p class="step-hint">Defaults to the full source image. Left at the source's own size, Crop is skipped at execution — params still travel with the recipe regardless.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-num">2</span><span class="step-title">Overlay</span></div>
+    <div class="row">
+      <label class="field-label">Asset</label>
+      <select id="overlay-source" style="padding:5px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);">
+        <optgroup label="Shapes and markers"><option>Star</option><option>Diamond</option></optgroup>
+        <optgroup label="Badges"><option>Trophy badge</option></optgroup>
+        <optgroup label="Watermark and logo"><option>Company logo</option></optgroup>
+      </select>
+    </div>
+    <div class="row" id="tier-row" style="align-items:flex-start;">
+      <label class="field-label" style="padding-top:4px;">Tiers</label>
+      <div id="tier-chips"></div>
+    </div>
+    <p class="step-hint">At least one tier required. Position and size per tier count are fixed, not user-configurable — biggest centered square within the Crop step's output.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-num">3</span><span class="step-title">Colour treatment</span></div>
+    <div class="slider-row"><label>Brightness</label><input type="range" min="0" max="200" value="100" id="ct-brightness" /><span class="val" id="ct-brightness-val">100%</span></div>
+    <div class="slider-row"><label>Contrast</label><input type="range" min="0" max="200" value="100" id="ct-contrast" /><span class="val" id="ct-contrast-val">100%</span></div>
+    <div class="slider-row"><label>Saturation</label><input type="range" min="0" max="200" value="100" id="ct-saturation" /><span class="val" id="ct-saturation-val">100%</span></div>
+    <div class="slider-row"><label>Hue</label><input type="range" min="-180" max="180" value="0" id="ct-hue" /><span class="val" id="ct-hue-val">0°</span></div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-num">4</span><span class="step-title">Resize</span></div>
+    <div class="row">
+      <label class="field-label">Width</label><input type="number" class="num-input" id="resize-w" value="512" />
+      <label class="field-label">Height</label><input type="number" class="num-input" id="resize-h" value="512" />
+    </div>
+    <p class="step-hint">Linked — editing either recomputes the other against the Crop step's aspect ratio. Box evaluated against Crop's output, not the source.</p>
+  </div>
+
+  <div id="step-format" class="step">
+    <div class="step-head"><span class="step-num">5</span><span class="step-title">Format conversion</span></div>
+    <div class="row">
+      <label class="field-label">Format</label>
+      <select id="format-target" style="padding:5px 8px; border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);">
+        <option value="webp">WebP</option>
+        <option value="avif">AVIF</option>
+        <option value="png">PNG</option>
+        <option value="jpeg">JPEG</option>
+      </select>
+    </div>
+    <div class="row" id="format-quality-row">
+      <label class="field-label">Quality</label><input type="range" min="1" max="100" value="85" id="format-quality" /><span class="val" id="format-quality-val">85</span>
+    </div>
+    <div class="row" id="format-bg-row" style="display:none;">
+      <label class="field-label">Background</label><input type="color" id="format-bg" value="#ffffff" /><span class="step-hint" style="margin:0;">Only shown when the target format can't hold alpha — flattening colour for any transparency in the source.</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px; background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:0.85rem 1.1rem; font-size:12px; color:var(--color-text-tertiary);">
+  This is the only card in the recipe for this comparison — no Single/Folder/Manifest chrome, no other operations. Real composer context (other cards, destination controls, totals) is in the 2026-06-23 v2 mockup; this file exists purely to judge this one card's density.
+</div>
+
+</div>
+
+<script>
+(function(){
+  var tiers = [1,2,3,4,5,6];
+  var activeTiers = {1:true};
+
+  var tierChipsEl = document.getElementById('tier-chips');
+  function renderTiers(){
+    tierChipsEl.innerHTML = tiers.map(function(n){
+      var active = !!activeTiers[n];
+      var bg = active ? 'var(--color-background-info)' : 'var(--color-background-primary)';
+      var col = active ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+      var bd = active ? 'var(--color-border-info)' : 'var(--color-border-tertiary)';
+      return '<button type="button" class="tier-chip" data-n="' + n + '" style="border:0.5px solid ' + bd + '; background:' + bg + '; color:' + col + '; padding:4px 10px; border-radius:var(--border-radius-md); font-size:13px; cursor:pointer; margin:0 6px 6px 0;">' + n + '</button>';
+    }).join('');
+    tierChipsEl.querySelectorAll('.tier-chip').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var n = Number(btn.getAttribute('data-n'));
+        var activeCount = Object.keys(activeTiers).filter(function(k){ return activeTiers[k]; }).length;
+        if(activeTiers[n] && activeCount === 1){ return; } // at least one required
+        activeTiers[n] = !activeTiers[n];
+        renderTiers();
+        updateOutputCount();
+      });
+    });
+  }
+
+  function updateOutputCount(){
+    var n = Object.keys(activeTiers).filter(function(k){ return activeTiers[k]; }).length;
+    document.getElementById('output-count').textContent = n + (n===1 ? ' output' : ' outputs');
+  }
+
+  renderTiers();
+  updateOutputCount();
+
+  // colour treatment sliders — live value readout
+  [['ct-brightness','%'],['ct-contrast','%'],['ct-saturation','%'],['ct-hue','°']].forEach(function(pair){
+    var input = document.getElementById(pair[0]);
+    var out = document.getElementById(pair[0] + '-val');
+    input.addEventListener('input', function(){ out.textContent = input.value + pair[1]; });
+  });
+
+  // resize linked to crop aspect ratio
+  var cropW = document.getElementById('crop-w'), cropH = document.getElementById('crop-h');
+  var resizeW = document.getElementById('resize-w'), resizeH = document.getElementById('resize-h');
+  resizeW.addEventListener('input', function(){
+    var ratio = (Number(cropH.value) || 1) / (Number(cropW.value) || 1);
+    resizeH.value = Math.round((Number(resizeW.value) || 0) * ratio);
+  });
+  resizeH.addEventListener('input', function(){
+    var ratio = (Number(cropW.value) || 1) / (Number(cropH.value) || 1);
+    resizeW.value = Math.round((Number(resizeH.value) || 0) * ratio);
+  });
+
+  // format conversion — conditional quality / background fields
+  var ALPHA_FORMATS = {webp:true, avif:true, png:true, jpeg:false};
+  var LOSSY_FORMATS = {webp:true, avif:true, jpeg:true, png:false};
+  var formatSelect = document.getElementById('format-target');
+  var qualityRow = document.getElementById('format-quality-row');
+  var bgRow = document.getElementById('format-bg-row');
+  var qualityInput = document.getElementById('format-quality');
+  var qualityVal = document.getElementById('format-quality-val');
+  qualityInput.addEventListener('input', function(){ qualityVal.textContent = qualityInput.value; });
+  function updateFormatFields(){
+    var fmt = formatSelect.value;
+    qualityRow.style.display = LOSSY_FORMATS[fmt] ? '' : 'none';
+    bgRow.style.display = ALPHA_FORMATS[fmt] ? 'none' : '';
+  }
+  formatSelect.addEventListener('change', updateFormatFields);
+  updateFormatFields();
+
+  // step toggles
+  document.getElementById('toggle-crop').addEventListener('change', function(e){
+    document.getElementById('step-crop').style.display = e.target.checked ? '' : 'none';
+  });
+  document.getElementById('toggle-format').addEventListener('change', function(e){
+    document.getElementById('step-format').style.display = e.target.checked ? '' : 'none';
+  });
+})();
+</script>
+</body>
+</html>
