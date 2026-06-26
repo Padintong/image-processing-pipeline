@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+option csharp_namespace = "ImagePipeline.Messaging.Protos";
+
+package imagepipeline.messaging;
+
+// ─── Envelope body ───────────────────────────────────────────────────────
+// Wire counterpart to JobEnvelope's AssetRef + Recipe fields (ADR-016/017).
+// JobId, CorrelationId, JobType, SubmittedAt travel in native AMQP
+// BasicProperties instead — never duplicated here.
+message EnvelopeBody {
+  string asset_ref = 1;
+  Recipe recipe = 2;
+}
+
+// ─── Recipe (ADR-006/007) ────────────────────────────────────────────────
+message Recipe {
+  repeated OperationInstance operations = 1;
+  string output_destination = 2;
+  bool is_relative_destination = 3;
+}
+
+// ─── OperationInstance (ADR-010/011/012/014) ─────────────────────────────
+// Closed 9-way tagged union — mirrors Core's sealed OperationInstance hierarchy.
+message OperationInstance {
+  oneof operation {
+    ResizeParams resize = 1;
+    CropParams crop = 2;
+    ColourTreatmentParams colour_treatment = 3;
+    FormatConversionParams format_conversion = 4;
+    OverlayParams overlay = 5;
+    PuzzleParams puzzle = 6;
+    ResizeAndConvertParams resize_and_convert = 7;
+    CropAndResizeParams crop_and_resize = 8;
+    AchievementArtworkParams achievement_artwork = 9;
+  }
+}
+
+// ─── Atomic axis params (ADR-010) ────────────────────────────────────────
+message ResizeParams {
+  int32 width = 1;
+  int32 height = 2;
+}
+
+message CropParams {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+message ColourTreatmentParams {
+  int32 brightness = 1;
+  int32 contrast = 2;
+  int32 saturation = 3;
+  int32 hue = 4;
+}
+
+message FormatConversionParams {
+  string target_format = 1;              // plain string for now — catalog not yet closed
+  optional int32 quality = 2;             // absent for lossless targets (ADR-010)
+  optional string background_colour = 3; // absent unless alpha needs flattening (ADR-013)
+}
+
+message OverlayParams {
+  string overlay_source = 1;
+  int32 position_x = 2;
+  int32 position_y = 3;
+  int32 scale = 4;
+  int32 opacity = 5;
+}
+
+message PuzzleParams {
+  int32 rows = 1;
+  int32 columns = 2;
+}
+
+// ─── Composite params (ADR-011/012/014) ──────────────────────────────────
+// Each reuses the atomic axis messages above — mirrors Core's nest-by-axis
+// convention, no duplicated field sets.
+message ResizeAndConvertParams {
+  ResizeParams resize = 1;
+  FormatConversionParams format_conversion = 2;
+}
+
+message CropAndResizeParams {
+  CropParams crop = 1;
+  ResizeParams resize = 2;
+}
+
+message AchievementArtworkParams {
+  CropParams crop = 1;
+  AchievementOverlayParams overlay = 2;
+  ColourTreatmentParams colour_treatment = 3;
+  ResizeParams resize = 4;
+  FormatConversionParams format_conversion = 5;
+}
+
+// Distinct from OverlayParams: position/size per tier are baked, not
+// user-configurable (ADR-014).
+message AchievementOverlayParams {
+  string overlay_source = 1;
+  repeated int32 tiers = 2; // each entry in {1..6}; validated at the domain layer, not here
+}
