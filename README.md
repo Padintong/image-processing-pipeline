@@ -40,15 +40,19 @@ flowchart TD
     subgraph sln[ImagePipeline.slnx]
         Api[ImagePipeline.Api]
         Worker[ImagePipeline.Worker]
+        Messaging[ImagePipeline.Messaging]
         Core[ImagePipeline.Core]
         Tests[ImagePipeline.Tests]
     end
     Api --> Core
+    Api --> Messaging
     Worker --> Core
+    Worker --> Messaging
+    Messaging --> Core
     Tests --> Core
 ```
 
-Four projects: **Api** (REST entry point) and **Worker** (queue consumer, hosts the Claude agents) both depend on **Core** (shared domain models and, for now, data access) but never on each other. **Tests** depends on Core only. See [ADR-002](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the reasoning, including why data access lives inside Core for now rather than a separate project.
+Five projects: **Api** (REST entry point) and **Worker** (queue consumer, hosts the Claude agents) both depend on **Core** (shared domain models and, for now, data access) and on **Messaging** (the envelope↔wire-format mapper, RabbitMQ.Client, and Protobuf-generated code), but never on each other. **Messaging** depends on Core only, keeping Core itself free of any messaging/infra dependency. **Tests** depends on Core only. See [ADR-002](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the original four-project reasoning and [ADR-019](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for why Messaging was split out as its own project rather than folded into Core.
 
 ## Tech Stack
 
@@ -76,7 +80,7 @@ cd image-processing-pipeline
 dotnet build
 ```
 
-Open `ImagePipeline.slnx` in Visual Studio 2026, or work from the CLI — both work against the same solution file. The four projects (Api, Worker, Core, Tests) are wired up per [Solution Structure](#solution-structure) above, but there's no real functionality yet; `dotnet build` succeeding is the meaningful check for now. These instructions will expand as the API and worker gain real logic.
+Open `ImagePipeline.slnx` in Visual Studio 2026, or work from the CLI — both work against the same solution file. The projects (Api, Worker, Messaging, Core, Tests) are wired up per [Solution Structure](#solution-structure) above, but there's no real functionality yet; `dotnet build` succeeding is the meaningful check for now. These instructions will expand as the API and worker gain real logic.
 
 ## Demo
 

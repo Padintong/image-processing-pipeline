@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="ImagePipeline.Api/ImagePipeline.Api.csproj" />
   <Project Path="ImagePipeline.Core/ImagePipeline.Core.csproj" />
+  <Project Path="ImagePipeline.Messaging/ImagePipeline.Messaging.csproj" />
   <Project Path="ImagePipeline.Tests/ImagePipeline.Tests.csproj" />
   <Project Path="ImagePipeline.Worker/ImagePipeline.Worker.csproj" />
 </Solution>

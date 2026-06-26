@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImagePipeline.Core\ImagePipeline.Core.csproj" />
+    <ProjectReference Include="..\ImagePipeline.Messaging\ImagePipeline.Messaging.csproj" />
   </ItemGroup>
 </Project>
