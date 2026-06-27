@@ -7,4 +7,30 @@ namespace ImagePipeline.Core;
 public sealed record Recipe(
     IReadOnlyList<OperationInstance> Operations,
     string OutputDestination,
-    bool IsRelativeDestination);
+    bool IsRelativeDestination)
+{
+    // Record-generated equality compares Operations via
+    // EqualityComparer<IReadOnlyList<OperationInstance>>.Default, which is
+    // reference equality for a List<T>/array — collection-typed members don't
+    // get value equality for free from `record`. Overridden so two Recipes
+    // with the same operations, in the same order, compare equal regardless
+    // of which concrete list/array instance holds them (found while writing
+    // EnvelopeMapper's round-trip tests — see the Learning Log).
+    public bool Equals(Recipe? other) =>
+        other is not null
+        && Operations.SequenceEqual(other.Operations)
+        && OutputDestination == other.OutputDestination
+        && IsRelativeDestination == other.IsRelativeDestination;
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var operation in Operations)
+        {
+            hash.Add(operation);
+        }
+        hash.Add(OutputDestination);
+        hash.Add(IsRelativeDestination);
+        return hash.ToHashCode();
+    }
+}

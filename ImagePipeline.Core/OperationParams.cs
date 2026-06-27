@@ -26,4 +26,23 @@ public sealed record PuzzleParams(int Rows, int Columns);
 // Achievement Artwork's own overlay axis (ADR-014) — distinct from standalone
 // OverlayParams: position/size per tier are baked, not user-configurable, and
 // Tiers (a subset of 1..6) drives this composite's multi-output cardinality.
-public sealed record AchievementOverlayParams(string OverlaySource, IReadOnlyList<int> Tiers);
+public sealed record AchievementOverlayParams(string OverlaySource, IReadOnlyList<int> Tiers)
+{
+    // Same collection-typed-member equality gap as Recipe.Operations — see
+    // the comment there. Tiers needs value equality, not reference equality.
+    public bool Equals(AchievementOverlayParams? other) =>
+        other is not null
+        && OverlaySource == other.OverlaySource
+        && Tiers.SequenceEqual(other.Tiers);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(OverlaySource);
+        foreach (var tier in Tiers)
+        {
+            hash.Add(tier);
+        }
+        return hash.ToHashCode();
+    }
+}
