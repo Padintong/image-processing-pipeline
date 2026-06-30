@@ -1,8 +1,14 @@
+using ImagePipeline.Storage;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Api only ever mints presigned URLs (ADR-022/025/028) — it never sees
+// IObjectStorage/R2ObjectStorage registered in this container.
+builder.Services.AddR2PresignedUrlProvider(builder.Configuration);
 
 var app = builder.Build();
 
