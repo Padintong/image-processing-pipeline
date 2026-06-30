@@ -42,6 +42,7 @@ flowchart TD
         Worker[ImagePipeline.Worker]
         Messaging[ImagePipeline.Messaging]
         Storage[ImagePipeline.Storage]
+        Processing[ImagePipeline.Processing]
         Core[ImagePipeline.Core]
         Tests[ImagePipeline.Tests]
     end
@@ -51,13 +52,16 @@ flowchart TD
     Worker --> Core
     Worker --> Messaging
     Worker --> Storage
+    Worker --> Processing
     Messaging --> Core
     Storage --> Core
+    Processing --> Core
     Tests --> Core
     Tests --> Messaging
+    Tests --> Storage
 ```
 
-Six projects: **Api** (REST entry point) and **Worker** (queue consumer, hosts the Claude agents) both depend on **Core** (shared domain models and, for now, data access), **Messaging** (the envelope↔wire-format mapper, RabbitMQ.Client, and Protobuf-generated code), and **Storage** (the `IObjectStorage` abstraction and AWSSDK.S3), but never on each other. **Messaging** and **Storage** each depend on Core only, keeping Core itself free of any infra dependency. **Tests** depends on Core and on Messaging (for `EnvelopeMapper` round-trip tests). See [ADR-002](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the original four-project reasoning, [ADR-019](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for why Messaging was split out as its own project, and [ADR-024](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the same reasoning applied to Storage.
+Seven projects: **Api** (REST entry point) and **Worker** (queue consumer, image processor, hosts the Claude agents) both depend on **Core** (shared domain models), **Messaging** (the envelope↔wire-format mapper, RabbitMQ.Client, and Protobuf-generated code), and **Storage** (the `IPresignedUrlProvider`/`IObjectStorage` abstractions and AWSSDK.S3), but never on each other. **Worker** additionally depends on **Processing** (the `IImageProcessor` abstraction and SixLabors.ImageSharp); Api does not. **Messaging**, **Storage**, and **Processing** each depend on Core only (plus their own infrastructure packages), keeping Core itself free of any infrastructure dependency. **Tests** covers Core, Messaging (for `EnvelopeMapper` round-trip tests), and Storage (for R2 adapter tests). See [ADR-002](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for the original four-project reasoning, [ADR-019](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for why Messaging was split out, [ADR-024](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for Storage's separation, and [ADR-029](https://app.notion.com/p/383ab8331d238116a393e11929c4d334) for Processing's.
 
 ## Tech Stack
 
@@ -85,7 +89,7 @@ cd image-processing-pipeline
 dotnet build
 ```
 
-Open `ImagePipeline.slnx` in Visual Studio 2026, or work from the CLI — both work against the same solution file. The projects (Api, Worker, Messaging, Storage, Core, Tests) are wired up per [Solution Structure](#solution-structure) above, but there's no real functionality yet; `dotnet build` succeeding is the meaningful check for now. These instructions will expand as the API and worker gain real logic.
+Open `ImagePipeline.slnx` in Visual Studio 2026, or work from the CLI — both work against the same solution file. The projects (Api, Worker, Messaging, Storage, Processing, Core, Tests) are wired up per [Solution Structure](#solution-structure) above, but there's no real functionality yet; `dotnet build` succeeding is the meaningful check for now. These instructions will expand as the API and worker gain real logic.
 
 ## Demo
 
