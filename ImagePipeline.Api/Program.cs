@@ -1,18 +1,18 @@
+using ImagePipeline.Api.Jobs;
+using ImagePipeline.Core;
 using ImagePipeline.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-// Api only ever mints presigned URLs (ADR-022/025/028) — it never sees
-// IObjectStorage/R2ObjectStorage registered in this container.
+// Api mints presigned URLs (ADR-022/025/028) and publishes job envelopes
+// (ADR-004/017). It never registers IObjectStorage — Worker owns that side.
 builder.Services.AddR2PresignedUrlProvider(builder.Configuration);
+builder.Services.AddJobPublisher(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -20,28 +20,38 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+// ─── POST /jobs/single ────────────────────────────────────────────────────
+// Accepts a single-asset job submission (ADR-004 envelope, ADR-009 routes).
+// The client provides assetRef + recipe; the server generates all envelope-
+// level fields. Single mode: correlation_id == job_id (confirmed design).
+app.MapPost("/jobs/single", async (
+    JobSubmissionRequest request,
+    IJobPublisher publisher,
+    CancellationToken ct) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    if (string.IsNullOrWhiteSpace(request.AssetRef))
+        return Results.Problem("assetRef is required.", statusCode: StatusCodes.Status400BadRequest);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    if (request.Recipe is null)
+        return Results.Problem("recipe is required.", statusCode: StatusCodes.Status400BadRequest);
+
+    var jobId = Guid.NewGuid();
+
+    var envelope = new JobEnvelope(
+        JobId:        jobId,
+        CorrelationId: jobId,   // Single mode: correlation_id == job_id
+        JobType:      JobTypes.ProcessRecipe,
+        AssetRef:     request.AssetRef,
+        SubmittedAt:  DateTimeOffset.UtcNow,
+        Recipe:       request.Recipe);
+
+    await publisher.PublishAsync(envelope, ct);
+
+    return Results.Json(new JobSubmissionResponse(jobId), statusCode: StatusCodes.Status202Accepted);
+});
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Required for WebApplicationFactory<Program> in integration tests
+// (the top-level-statements Program class is internal by default).
+public partial class Program { }

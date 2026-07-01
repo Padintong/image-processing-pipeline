@@ -9,6 +9,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Direct ref even though Messaging already carries RabbitMQ.Client
+         transitively: explicit deps prevent a silent break if Messaging ever
+         changes its own package graph (same rationale as Storage's own ref). -->
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
   </ItemGroup>
 
   <ItemGroup>

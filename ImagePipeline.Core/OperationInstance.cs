@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ImagePipeline.Core;
 
 // One operation instance within a Recipe — a single atomic or composite
@@ -8,6 +10,21 @@ namespace ImagePipeline.Core;
 // not designed for further specialization (ADR-018). The base stays open —
 // new sibling operation types are added as new sealed records here, not by
 // subclassing an existing leaf.
+//
+// [JsonPolymorphic] / [JsonDerivedType] let System.Text.Json deserialize
+// the concrete subtype from a "$type" discriminator in the HTTP request
+// body (e.g. { "$type": "resize", "params": { ... } }). These attributes
+// live in the runtime-bundled System.Text.Json — no extra package needed.
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(ResizeOperation),             "resize")]
+[JsonDerivedType(typeof(CropOperation),               "crop")]
+[JsonDerivedType(typeof(ColourTreatmentOperation),    "colour_treatment")]
+[JsonDerivedType(typeof(FormatConversionOperation),   "format_conversion")]
+[JsonDerivedType(typeof(OverlayOperation),            "overlay")]
+[JsonDerivedType(typeof(PuzzleOperation),             "puzzle")]
+[JsonDerivedType(typeof(ResizeAndConvertOperation),   "resize_and_convert")]
+[JsonDerivedType(typeof(CropAndResizeOperation),      "crop_and_resize")]
+[JsonDerivedType(typeof(AchievementArtworkOperation), "achievement_artwork")]
 public abstract record OperationInstance;
 
 // Atomics — ADR-010
