@@ -1,3 +1,4 @@
+using ImagePipeline.Processing;
 using ImagePipeline.Storage;
 using ImagePipeline.Worker;
 
@@ -7,6 +8,7 @@ var builder = Host.CreateApplicationBuilder(args);
 // — it never sees IPresignedUrlProvider/R2PresignedUrlProvider registered
 // in this container.
 builder.Services.AddR2ObjectStorage(builder.Configuration);
+builder.Services.AddImageProcessing();
 
 builder.Services.AddHostedService<Worker>();
 
